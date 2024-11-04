@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import config from './config'; // Import configuration
+import config from './config';
 import './App.css';
 
 function App() {
@@ -14,7 +14,6 @@ function App() {
   );
 }
 
-// Header Component
 const Header = () => (
   <header className="header" style={{ backgroundColor: config.header.backgroundColor, color: config.header.textColor }}>
     <nav>
@@ -30,7 +29,6 @@ const Header = () => (
   </header>
 );
 
-// Body Component
 const Body = () => (
   <section className="body-content" style={{ backgroundColor: config.body.backgroundColor }}>
     <div className="intro">
@@ -45,7 +43,6 @@ const Body = () => (
   </section>
 );
 
-// Footer Component
 const Footer = () => (
   <footer className="footer" style={{ backgroundColor: config.footer.backgroundColor, color: config.footer.textColor }}>
     <p>{config.footer.text}</p>
@@ -57,15 +54,27 @@ const Footer = () => (
   </footer>
 );
 
-// Chatbot Component
-// Chatbot Component
 const Chatbot = () => {
   const [messages, setMessages] = useState([{ text: config.chatbot.welcomeMessage, sender: 'bot' }]);
   const [input, setInput] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [apiKeyExpiration, setApiKeyExpiration] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(config.chatbot.models[0].value); // Default to first model
+  const [selectedModel, setSelectedModel] = useState(config.chatbot.models[0].value);
+
+  const handleApiKeySubmit = () => {
+    setApiKeyExpiration(Date.now() + 10 * 60 * 1000); // 10-minute expiration
+  };
 
   const sendMessage = async (message) => {
+    if (!apiKey || Date.now() > apiKeyExpiration) {
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { text: "API key expired. Please enter a new key.", sender: 'bot' }
+      ]);
+      return;
+    }
+
     setMessages([...messages, { text: message, sender: 'user' }]);
     setInput('');
     setIsLoading(true);
@@ -73,8 +82,8 @@ const Chatbot = () => {
     try {
       const response = await callModelAPI(selectedModel, message);
 
-      const botReply = response?.data?.choices?.[0]?.message?.content?.trim() 
-        ? response.data.choices[0].message.content.trim() 
+      const botReply = response?.data?.choices?.[0]?.message?.content?.trim()
+        ? response.data.choices[0].message.content.trim()
         : "Sorry, I couldn't process your question. Please try again.";
 
       setMessages((prevMessages) => [
@@ -88,7 +97,7 @@ const Chatbot = () => {
         { text: "Sorry, an error occurred. Please try again.", sender: 'bot' }
       ]);
     }
-    
+
     setIsLoading(false);
   };
 
@@ -120,7 +129,7 @@ const Chatbot = () => {
     try {
       const response = await axios.post(apiUrlMap[model], params, {
         headers: {
-          'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         }
       });
@@ -144,6 +153,17 @@ const Chatbot = () => {
           ))}
         </div>
         {isLoading && <p>Loading...</p>}
+        {(!apiKey || Date.now() > apiKeyExpiration) && (
+          <div className="api-key-input">
+            <input
+              type="text"
+              placeholder="Enter API key"
+              onChange={(e) => setApiKey(e.target.value)}
+              value={apiKey}
+            />
+            <button onClick={handleApiKeySubmit}>Submit Key</button>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="chat-input">
           <select
             className="model-selector"
@@ -167,6 +187,5 @@ const Chatbot = () => {
     </div>
   );
 };
-
 
 export default App;
