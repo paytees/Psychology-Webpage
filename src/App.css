@@ -137,6 +137,7 @@ body, html {
   max-height: 500px;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* Prevents overflow issues */
 }
 
 .chat-window {
@@ -151,6 +152,7 @@ body, html {
   padding: 10px;
   background-color: #f9f9f9;
   border-radius: 10px 10px 0 0;
+  max-height: 350px; /* Limits the height for better scroll control */
 }
 
 .message {
@@ -174,6 +176,7 @@ body, html {
   text-align: left;
 }
 
+/* Chat Input and Button Styles */
 .chat-input {
   display: flex;
   align-items: center;

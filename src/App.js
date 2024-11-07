@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import config from './config';
 import './App.css';
@@ -61,6 +61,7 @@ const Chatbot = () => {
   const [apiKeyExpiration, setApiKeyExpiration] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(config.chatbot.models[0].value);
+  const messagesEndRef = useRef(null); // Reference for auto-scroll
 
   const handleApiKeySubmit = () => {
     setApiKeyExpiration(Date.now() + 10 * 60 * 1000); // 10-minute expiration
@@ -140,6 +141,11 @@ const Chatbot = () => {
     }
   };
 
+  // Auto-scroll to the bottom of the chat after each new message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   return (
     <div className="chatbot">
       <div className="chat-window">
@@ -151,6 +157,7 @@ const Chatbot = () => {
               </p>
             </div>
           ))}
+          <div ref={messagesEndRef} />
         </div>
         {isLoading && <p>Loading...</p>}
         {(!apiKey || Date.now() > apiKeyExpiration) && (
@@ -174,7 +181,6 @@ const Chatbot = () => {
               <option key={idx} value={model.value}>{model.label}</option>
             ))}
           </select>
-
           <input
             type="text"
             value={input}
