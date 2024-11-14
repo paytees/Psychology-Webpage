@@ -9,7 +9,9 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const SECRET_KEY = "***REMOVED***";
+require('dotenv').config();
+const SECRET_KEY = process.env.REACT_APP_OPENAI_API_KEY;
+
 const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "adminpassword";
 
