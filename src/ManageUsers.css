@@ -1,0 +1,89 @@
+.manage-users {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .manage-users h2 {
+    text-align: center;
+    font-size: 1.8rem;
+    color: #333;
+  }
+  
+  .error {
+    color: #d9534f;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  
+  .user-list {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .user-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .username {
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .status {
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  
+  .status.approved {
+    color: #4CAF50;
+    background-color: #e7f7e7;
+  }
+  
+  .status.reverted {
+    color: #f44336;
+    background-color: #fdeaea;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .approve-button,
+  .revert-button {
+    padding: 5px 10px;
+    font-size: 0.9rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .approve-button {
+    background-color: #4CAF50;
+    color: #fff;
+  }
+  
+  .approve-button:hover {
+    background-color: #45a049;
+  }
+  
+  .revert-button {
+    background-color: #f44336;
+    color: #fff;
+  }
+  
+  .revert-button:hover {
+    background-color: #e53935;
+  }
+  

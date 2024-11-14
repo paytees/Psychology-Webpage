@@ -1,197 +1,259 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
+import Chatbot from './Chatbot';
 import axios from 'axios';
 import config from './config';
 import './App.css';
+import ManageUsers from './ManageUsers';
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [token, setToken] = useState('');
+  const [error, setError] = useState('');
+  const [showRegister, setShowRegister] = useState(false); // Controls registration modal visibility
+  const [showLogin, setShowLogin] = useState(false);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [adminToken, setAdminToken] = useState(null);
+
+  const handleLogout = () => {
+    setToken('');
+    setAdminToken(null);
+    setIsLoggedIn(false);
+    setShowAdminDashboard(false);
+  };
+
+  const handleAdminLogin = async (username, password) => {
+    try {
+      const response = await axios.post(config.api.adminLoginUrl, { username, password });
+      setAdminToken(response.data.token);
+      setShowLogin(false);
+      setShowAdminDashboard(true);
+    } catch (error) {
+      setError('Admin login failed: ' + (error.response?.data?.error || 'Unauthorized'));
+    }
+  };
+
+  const handleUserLogin = async (username, password) => {
+    try {
+      const response = await axios.post(config.api.loginUrl, { username, password });
+      setToken(response.data.token);
+      setIsLoggedIn(true);
+      setShowLogin(false);
+    } catch (error) {
+      setError('Login failed: ' + (error.response?.data?.error || 'Unauthorized'));
+    }
+  };
+
   return (
     <div className="App">
-      <Header />
-      <Body />
-      <Footer />
-      <Chatbot />
+      <Header
+        onRegister={() => setShowRegister(true)} // Open register modal
+        onLogin={() => setShowLogin(true)}
+        isLoggedIn={isLoggedIn || showAdminDashboard}
+        onLogout={handleLogout}
+      />
+      {showAdminDashboard ? (
+        <ManageUsers adminToken={adminToken} />
+      ) : (
+        <>
+          <Body />
+          <Footer />
+          {isLoggedIn && <Chatbot token={token} />}
+          {showLogin && (
+            <LoginModal
+              show={showLogin}
+              onClose={() => setShowLogin(false)}
+              onUserLogin={(username, password) => handleUserLogin(username, password)}
+              onAdminLogin={(username, password) => handleAdminLogin(username, password)}
+              error={error}
+              onRegister={() => {
+                setShowLogin(false); // Close login modal
+                setShowRegister(true); // Open register modal
+              }}
+            />
+          )}
+          {showRegister && (
+            <RegisterModal
+              show={showRegister}
+              onClose={() => setShowRegister(false)}
+              onSuccess={() => {
+                setShowRegister(false);
+                setShowLogin(true);
+              }}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }
 
-const Header = () => (
-  <header className="header" style={{ backgroundColor: config.header.backgroundColor, color: config.header.textColor }}>
-    <nav>
+function Header({ onRegister, onLogin, isLoggedIn, onLogout }) {
+  return (
+    <header className="header">
       <h1>{config.header.title}</h1>
-      <ul>
-        {config.header.links.map((link, idx) => (
-          <li key={idx}>
-            <a href={link.href} style={{ color: config.header.textColor }}>{link.label}</a>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  </header>
-);
+      <nav>
+        <ul>
+          {config.header.links.map((link, idx) => (
+            <li key={idx}>
+              <a href={link.href}>{link.label}</a>
+            </li>
+          ))}
+          {!isLoggedIn ? (
+            <>
+              <li><button onClick={onLogin} className="nav-button">Login</button></li>
+              {/* <li><button onClick={onRegister} className="nav-button">Register</button></li> */}
+            </>
+          ) : (
+            <li><button onClick={onLogout} className="nav-button">Logout</button></li>
+          )}
+        </ul>
+      </nav>
+    </header>
+  );
+}
 
-const Body = () => (
-  <section className="body-content" style={{ backgroundColor: config.body.backgroundColor }}>
-    <div className="intro">
+function Body() {
+  return (
+    <section className="body-content">
       <h2>{config.body.intro.title}</h2>
-      <p style={{ color: config.body.textColor }}>{config.body.intro.description}</p>
-    </div>
-    <div className="image-section">
-      {config.body.images.map((image, idx) => (
-        <img key={idx} src={image.src} alt={image.alt} />
-      ))}
-    </div>
-  </section>
-);
+      <p>{config.body.intro.description}</p>
+      <div className="image-section">
+        {config.body.images.map((image, idx) => (
+          <img key={idx} src={image.src} alt={image.alt} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
-const Footer = () => (
-  <footer className="footer" style={{ backgroundColor: config.footer.backgroundColor, color: config.footer.textColor }}>
-    <p>{config.footer.text}</p>
-    <div>
-      {config.footer.links.map((link, idx) => (
-        <a key={idx} href={link.href} style={{ color: config.footer.textColor }}>{link.label}</a>
-      ))}
-    </div>
-  </footer>
-);
+function Footer() {
+  return (
+    <footer className="footer">
+      <p>{config.footer.text}</p>
+      <div className="social-links">
+        {config.footer.links.map((link, idx) => (
+          <a key={idx} href={link.href}>{link.label}</a>
+        ))}
+      </div>
+    </footer>
+  );
+}
 
-const Chatbot = () => {
-  const [messages, setMessages] = useState([{ text: config.chatbot.welcomeMessage, sender: 'bot' }]);
-  const [input, setInput] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [apiKeyExpiration, setApiKeyExpiration] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(config.chatbot.models[0].value);
-  const messagesEndRef = useRef(null); // Reference for auto-scroll
+function LoginModal({ show, onClose, onUserLogin, onAdminLogin, error, onRegister }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const handleApiKeySubmit = () => {
-    setApiKeyExpiration(Date.now() + 10 * 60 * 1000); // 10-minute expiration
-  };
-
-  const sendMessage = async (message) => {
-    if (!apiKey || Date.now() > apiKeyExpiration) {
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { text: "API key expired. Please enter a new key.", sender: 'bot' }
-      ]);
-      return;
-    }
-
-    setMessages([...messages, { text: message, sender: 'user' }]);
-    setInput('');
-    setIsLoading(true);
-
-    try {
-      const response = await callModelAPI(selectedModel, message);
-
-      const botReply = response?.data?.choices?.[0]?.message?.content?.trim()
-        ? response.data.choices[0].message.content.trim()
-        : "Sorry, I couldn't process your question. Please try again.";
-
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { text: botReply, sender: 'bot' }
-      ]);
-    } catch (error) {
-      console.error("Error while sending message:", error.message || error);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { text: "Sorry, an error occurred. Please try again.", sender: 'bot' }
-      ]);
-    }
-
-    setIsLoading(false);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (input.trim()) {
-      sendMessage(input);
+  const handleLogin = () => {
+    if (isAdmin) {
+      onAdminLogin(username, password);
+    } else {
+      onUserLogin(username, password);
     }
   };
 
-  const callModelAPI = async (model, message) => {
-    const apiUrlMap = {
-      "openai-gpt3": 'https://api.openai.com/v1/chat/completions',
-      "gemini": 'https://gemini-api.example.com',
-      "google-bard": 'https://bard-api.example.com',
-      "anthropic-claude": 'https://anthropic-claude-api.example.com'
-    };
-
-    const params = {
-      model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: "You are a helpful assistant specialized in psychology." },
-        { role: "user", content: message }
-      ],
-      max_tokens: 150,
-      temperature: 0.7
-    };
-
-    try {
-      const response = await axios.post(apiUrlMap[model], params, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      return response;
-    } catch (error) {
-      console.error("Error with API call:", error.response || error.message);
-      throw error;
-    }
-  };
-
-  // Auto-scroll to the bottom of the chat after each new message
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  if (!show) return null;
 
   return (
-    <div className="chatbot">
-      <div className="chat-window">
-        <div className="chat-messages">
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`message ${msg.sender}`}>
-              <p style={{ backgroundColor: msg.sender === 'bot' ? config.chatbot.botReplyColor : config.chatbot.userReplyColor }}>
-                {msg.text}
-              </p>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
+    <div className="modal">
+      <div className="modal-content">
+        <h2>{isAdmin ? 'Admin Login' : 'User Login'}</h2>
+        {error && <p className="error-message">{error}</p>}
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="modal-input"
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="modal-input"
+        />
+        <div className="login-toggle">
+          <label>
+            <input type="checkbox" checked={isAdmin} onChange={() => setIsAdmin(!isAdmin)} />
+            Admin Login
+          </label>
         </div>
-        {isLoading && <p>Loading...</p>}
-        {(!apiKey || Date.now() > apiKeyExpiration) && (
-          <div className="api-key-input">
-            <input
-              type="text"
-              placeholder="Enter API key"
-              onChange={(e) => setApiKey(e.target.value)}
-              value={apiKey}
-            />
-            <button onClick={handleApiKeySubmit}>Submit Key</button>
-          </div>
-        )}
-        <form onSubmit={handleSubmit} className="chat-input">
-          <select
-            className="model-selector"
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-          >
-            {config.chatbot.models.map((model, idx) => (
-              <option key={idx} value={model.value}>{model.label}</option>
-            ))}
-          </select>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={config.chatbot.placeholder}
-          />
-          <button type="submit">Send</button>
-        </form>
+        <button onClick={handleLogin} className="modal-button">Login</button>
+        <button onClick={onClose} className="close-button">Close</button>
+        <p>
+          Not Yet Registered?{' '}
+          <span onClick={onRegister} className="register-link">Register</span>
+        </p>
       </div>
     </div>
   );
-};
+}
+
+function RegisterModal({ show, onClose, onSuccess }) {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [mailId, setMailId] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleRegister = async () => {
+    try {
+      await axios.post(config.api.registerUrl, { firstName, lastName, mailId, username, password });
+      onSuccess();
+    } catch (error) {
+      setError(error.response?.data?.error || 'Registration failed');
+    }
+  };
+
+  if (!show) return null;
+
+  return (
+    <div className="modal">
+      <div className="modal-content">
+        <h2>Register</h2>
+        {error && <p className="error-message">{error}</p>}
+        <input
+          type="text"
+          placeholder="First Name"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          className="modal-input"
+        />
+        <input
+          type="text"
+          placeholder="Last Name"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          className="modal-input"
+        />
+        <input
+          type="email"
+          placeholder="Mail ID"
+          value={mailId}
+          onChange={(e) => setMailId(e.target.value)}
+          className="modal-input"
+        />
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="modal-input"
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="modal-input"
+        />
+        <button onClick={handleRegister} className="modal-button">Register</button>
+        <button onClick={onClose} className="close-button">Close</button>
+      </div>
+    </div>
+  );
+}
 
 export default App;
