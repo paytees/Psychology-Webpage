@@ -2,12 +2,12 @@ const config = {
   api: {
     baseUrl: 'https://psychology-backend.onrender.com', // Base URL for all API calls
 
-    // Derive other URLs dynamically using baseUrl
-    loginUrl: `${this.baseUrl}/login`,           // Regular user login endpoint
-    adminLoginUrl: `${this.baseUrl}/admin/login`, // Admin login endpoint
-    registerUrl: `${this.baseUrl}/register`,      // Registration endpoint
-    chatbotAccessUrl: `${this.baseUrl}/chatbot-access`, // Chatbot access check
-    chatApiUrl: `${this.baseUrl}/chat`,           // Chatbot API
+    // Use the baseUrl directly to construct other URLs
+    loginUrl: 'https://psychology-backend.onrender.com/login',
+    adminLoginUrl: 'https://psychology-backend.onrender.com/admin/login',
+    registerUrl: 'https://psychology-backend.onrender.com/register',
+    chatbotAccessUrl: 'https://psychology-backend.onrender.com/chatbot-access',
+    chatApiUrl: 'https://psychology-backend.onrender.com/chat',
   },
   header: {
     title: "Psychology Student Platform",
