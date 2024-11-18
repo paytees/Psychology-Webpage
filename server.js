@@ -9,10 +9,10 @@ const cors = require('cors');
 const app = express();
 
 app.use(cors({
-  origin: ['http://localhost:3000', ' https://paytess02.github.io/web-page/'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true, // Include credentials if necessary
+   origin: ['https://paytess02.github.io', 'http://localhost:3000'], // Allow GitHub Pages and local development
+   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],            // Allowed HTTP methods
+   allowedHeaders: ['Content-Type', 'Authorization'],               // Allowed headers
+   credentials: true,  // Include credentials if necessary
 }));
 app.options('*', cors());
 app.use(express.json());
