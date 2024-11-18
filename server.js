@@ -1,4 +1,5 @@
 // server.js - Backend code to handle API requests
+require('dotenv').config();
 const express = require('express');
 const bcrypt = require('bcrypt');
 const sqlite3 = require('sqlite3').verbose();
@@ -6,10 +7,17 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 
 const app = express();
-app.use(express.json());
-app.use(cors());
 
-require('dotenv').config();
+app.use(cors({
+  origin: ['http://localhost:3000', ' https://paytess02.github.io/web-page/'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, // Include credentials if necessary
+}));
+app.options('*', cors());
+app.use(express.json());
+
+
 const SECRET_KEY = process.env.OPENAI_API_KEY;
 
 
