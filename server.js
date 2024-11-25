@@ -48,6 +48,15 @@ db.serialize(() => {
       FOREIGN KEY(user_id) REFERENCES users(id)
     )
   `);
+  db.run(`
+    CREATE TABLE IF NOT EXISTS UserRequest (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL,
+      question TEXT NOT NULL,
+      chatGPTResponse TEXT,
+      createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
   console.log("Tables initialized.");
 });
 
@@ -61,17 +70,24 @@ app.post('/register', (req, res) => {
   const hashedPassword = bcrypt.hashSync(password, 10);
 
   db.run(`INSERT INTO users (username, password) VALUES (?, ?)`, [username, hashedPassword], function (err) {
-    if (err) return res.status(400).json({ error: 'Username already exists' });
+    if (err) {
+      console.error("Error inserting into users table:", err);
+      return res.status(400).json({ error: 'Username already exists or other database error' });
+    }
     
-    // Insert into role table as "registered" with "pending" approval status
-    db.run(`INSERT INTO role (user_id, role, approval_status) VALUES (?, 'registered', 'pending')`, 
+    db.run(
+      `INSERT INTO role (user_id, role, approval_status) VALUES (?, 'registered', 'pending')`, 
       [this.lastID], 
       (err) => {
-        if (err) return res.status(500).json({ error: 'Error assigning role' });
+        if (err) {
+          console.error("Error assigning role:", err);
+          return res.status(500).json({ error: 'Error assigning role' });
+        }
         res.json({ message: 'Registration successful, awaiting approval' });
       }
     );
   });
+  
 });
 
 // User Login
@@ -156,32 +172,105 @@ app.post('/chat', async (req, res) => {
   if (!message) return res.status(400).json({ error: 'Message is required' });
 
   try {
-    const fetch = (await import('node-fetch')).default;
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SECRET_KEY}`, // OpenAI API Key
-      },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: message }],
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`OpenAI API error: ${error.error.message}`);
-    }
-
-    const data = await response.json();
-    const reply = data.choices[0].message.content;
+    const reply = `Echo: ${message}`; // Replace with actual chatbot logic
     res.json({ reply });
   } catch (error) {
-    console.error("Error with OpenAI API:", error.message);
-    res.status(500).json({ error: 'Failed to get response from the chatbot' });
+    console.error('Error:', error.message);
+    res.status(500).json({ error: 'Failed to process message' });
   }
 });
+
+app.post('/user-requests', (req, res) => {
+  const { username, question, chatGPTResponse } = req.body;
+
+  if (!username || !question || !chatGPTResponse) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  db.run(
+    `INSERT INTO UserRequest (username, question, chatGPTResponse) VALUES (?, ?, ?)`,
+    [username, question, chatGPTResponse],
+    function (err) {
+      if (err) {
+        console.error('Error inserting user request:', err.message);
+        return res.status(500).json({ error: 'Failed to log user request' });
+      }
+      res.json({ message: 'User request logged successfully' });
+    }
+  );
+});
+
+
+app.put('/user-requests/:id/chatgpt-response', (req, res) => {
+  const { id } = req.params;
+  const { chatGPTResponse } = req.body;
+
+  if (!chatGPTResponse) {
+    return res.status(400).json({ error: 'ChatGPT response is required' });
+  }
+
+  db.run(
+    `UPDATE UserRequest SET chatGPTResponse = ? WHERE id = ?`,
+    [chatGPTResponse, id],
+    function (err) {
+      if (err || this.changes === 0) {
+        console.error('Error updating ChatGPT response:', err ? err.message : 'No changes made');
+        return res.status(500).json({ error: 'Failed to update ChatGPT response' });
+      }
+      res.json({ message: 'ChatGPT response updated successfully' });
+    }
+  );
+});
+app.put('/user-requests/:id/admin-response', (req, res) => {
+  const { id } = req.params;
+  const { adminResponse } = req.body;
+
+  if (!adminResponse) {
+    return res.status(400).json({ error: 'Admin response is required' });
+  }
+
+  db.run(
+    `UPDATE UserRequest SET adminResponse = ? WHERE id = ?`,
+    [adminResponse, id],
+    function (err) {
+      if (err || this.changes === 0) {
+        console.error('Error updating admin response:', err ? err.message : 'No changes made');
+        return res.status(500).json({ error: 'Failed to update admin response' });
+      }
+      res.json({ message: 'Admin response updated successfully' });
+    }
+  );
+});
+app.put('/user-requests/:id/feedback', (req, res) => {
+  const { id } = req.params;
+  const { feedback } = req.body;
+
+  if (!feedback) {
+    return res.status(400).json({ error: 'Feedback is required' });
+  }
+
+  db.run(
+    `UPDATE UserRequest SET feedback = ? WHERE id = ?`,
+    [feedback, id],
+    function (err) {
+      if (err || this.changes === 0) {
+        console.error('Error updating feedback:', err ? err.message : 'No changes made');
+        return res.status(500).json({ error: 'Failed to update feedback' });
+      }
+      res.json({ message: 'Feedback added successfully' });
+    }
+  );
+});
+app.get('/user-requests', (req, res) => {
+  db.all(`SELECT * FROM UserRequest ORDER BY createdAt DESC`, (err, rows) => {
+    if (err) {
+      console.error('Error fetching user requests:', err.message);
+      return res.status(500).json({ error: 'Failed to fetch user requests' });
+    }
+    res.json({ userRequests: rows });
+  });
+});
+
 
 // Start the server
 const PORT = process.env.PORT || 5000;
