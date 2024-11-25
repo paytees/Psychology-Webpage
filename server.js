@@ -175,11 +175,11 @@ app.post('/chat', async (req, res) => {
     const reply = `Echo: ${message}`; // Replace with actual chatbot logic
     res.json({ reply });
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Chat endpoint error:', error.message);
     res.status(500).json({ error: 'Failed to process message' });
   }
 });
-
+// Log User Request
 app.post('/user-requests', (req, res) => {
   const { username, question, chatGPTResponse } = req.body;
 
@@ -199,7 +199,6 @@ app.post('/user-requests', (req, res) => {
     }
   );
 });
-
 
 app.put('/user-requests/:id/chatgpt-response', (req, res) => {
   const { id } = req.params;
