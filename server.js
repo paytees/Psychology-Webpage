@@ -54,6 +54,8 @@ db.serialize(() => {
       username TEXT NOT NULL,
       question TEXT NOT NULL,
       chatGPTResponse TEXT,
+      adminResponse TEXT,
+      feedback TEXT,
       createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -172,14 +174,32 @@ app.post('/chat', async (req, res) => {
   if (!message) return res.status(400).json({ error: 'Message is required' });
 
   try {
-    const reply = `Echo: ${message}`; // Replace with actual chatbot logic
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SECRET_KEY}`, // OpenAI API Key
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: message }],
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`OpenAI API error: ${error.error.message}`);
+    }
+
+    const data = await response.json();
+    const reply = data.choices[0].message.content;
     res.json({ reply });
   } catch (error) {
-    console.error('Chat endpoint error:', error.message);
-    res.status(500).json({ error: 'Failed to process message' });
+    console.error("Error with OpenAI API:", error.message);
+    res.status(500).json({ error: 'Failed to get response from the chatbot' });
   }
 });
-// Log User Request
 app.post('/user-requests', (req, res) => {
   const { username, question, chatGPTResponse } = req.body;
 
@@ -195,7 +215,7 @@ app.post('/user-requests', (req, res) => {
         console.error('Error inserting user request:', err.message);
         return res.status(500).json({ error: 'Failed to log user request' });
       }
-      res.json({ message: 'User request logged successfully' });
+      res.json({ message: 'User request logged successfully', requestId: this.lastID });
     }
   );
 });
