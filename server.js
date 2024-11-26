@@ -208,17 +208,16 @@ app.post('/user-requests', (req, res) => {
   }
 
   db.run(
-    `INSERT INTO UserRequest (username, question, chatGPTResponse, adminResponse feedback) VALUES (?, ?, ?, ?, ?)`,
-    [username, question, chatGPTResponse, adminResponse, feedback],
+    `INSERT INTO UserRequest (username, question, chatGPTResponse) VALUES (?, ?, ?)`,
+    [username, question, chatGPTResponse],
     function (err) {
       if (err) {
         console.error('Error inserting user request:', err.message);
-      } else {
-        console.log('Inserted row ID:', this.lastID);
+        return res.status(500).json({ error: 'Failed to log user request' });
       }
+      res.json({ message: 'User request logged successfully', requestId: this.lastID });
     }
   );
-  
 });
 
 app.put('/user-requests/:id/chatgpt-response', (req, res) => {
@@ -254,7 +253,7 @@ app.put('/user-requests/:id/admin-response', (req, res) => {
     [adminResponse, id],
     function (err) {
       if (err || this.changes === 0) {
-        console.error('Error updating admin response:', err ? err.message : 'No changes made');
+        console.error('Error updating admin response:', err.message);
         return res.status(500).json({ error: 'Failed to update admin response' });
       }
       res.json({ message: 'Admin response updated successfully' });
@@ -274,7 +273,7 @@ app.put('/user-requests/:id/feedback', (req, res) => {
     [feedback, id],
     function (err) {
       if (err || this.changes === 0) {
-        console.error('Error updating feedback:', err ? err.message : 'No changes made');
+        console.error('Error updating feedback:', err.message);
         return res.status(500).json({ error: 'Failed to update feedback' });
       }
       res.json({ message: 'Feedback added successfully' });
