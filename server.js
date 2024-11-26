@@ -73,25 +73,24 @@ app.post('/register', (req, res) => {
 
   db.run(`INSERT INTO users (username, password) VALUES (?, ?)`, [username, hashedPassword], function (err) {
     if (err) {
-      console.error("Error inserting into users table:", err.message); // Log error
+      console.error("Error inserting into users table:", err);
       return res.status(400).json({ error: 'Username already exists or other database error' });
     }
-    console.log(`User registered successfully: ID = ${this.lastID}, Username = ${username}`); // Log success
-
+    
     db.run(
       `INSERT INTO role (user_id, role, approval_status) VALUES (?, 'registered', 'pending')`, 
       [this.lastID], 
       (err) => {
         if (err) {
-          console.error("Error assigning role:", err.message); // Log role assignment errors
+          console.error("Error assigning role:", err);
           return res.status(500).json({ error: 'Error assigning role' });
         }
         res.json({ message: 'Registration successful, awaiting approval' });
       }
     );
   });
+  
 });
-
 
 // User Login
 app.post('/login', (req, res) => {
