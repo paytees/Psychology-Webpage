@@ -73,24 +73,25 @@ app.post('/register', (req, res) => {
 
   db.run(`INSERT INTO users (username, password) VALUES (?, ?)`, [username, hashedPassword], function (err) {
     if (err) {
-      console.error("Error inserting into users table:", err);
+      console.error("Error inserting into users table:", err.message); // Log error
       return res.status(400).json({ error: 'Username already exists or other database error' });
     }
-    
+    console.log(`User registered successfully: ID = ${this.lastID}, Username = ${username}`); // Log success
+
     db.run(
       `INSERT INTO role (user_id, role, approval_status) VALUES (?, 'registered', 'pending')`, 
       [this.lastID], 
       (err) => {
         if (err) {
-          console.error("Error assigning role:", err);
+          console.error("Error assigning role:", err.message); // Log role assignment errors
           return res.status(500).json({ error: 'Error assigning role' });
         }
         res.json({ message: 'Registration successful, awaiting approval' });
       }
     );
   });
-  
 });
+
 
 // User Login
 app.post('/login', (req, res) => {
@@ -208,16 +209,17 @@ app.post('/user-requests', (req, res) => {
   }
 
   db.run(
-    `INSERT INTO UserRequest (username, question, chatGPTResponse) VALUES (?, ?, ?)`,
-    [username, question, chatGPTResponse],
+    `INSERT INTO UserRequest (username, question, chatGPTResponse, adminResponse feedback) VALUES (?, ?, ?, ?, ?)`,
+    [username, question, chatGPTResponse, adminResponse, feedback],
     function (err) {
       if (err) {
         console.error('Error inserting user request:', err.message);
-        return res.status(500).json({ error: 'Failed to log user request' });
+      } else {
+        console.log('Inserted row ID:', this.lastID);
       }
-      res.json({ message: 'User request logged successfully', requestId: this.lastID });
     }
   );
+  
 });
 
 app.put('/user-requests/:id/chatgpt-response', (req, res) => {
