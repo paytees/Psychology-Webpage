@@ -4,15 +4,17 @@ import axios from 'axios';
 import config from './config';
 import './App.css';
 import ManageUsers from './ManageUsers';
+import ManagePrompts from './Manageprompts';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
-  const [showRegister, setShowRegister] = useState(false); // Controls registration modal visibility
+  const [showRegister, setShowRegister] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [adminToken, setAdminToken] = useState(null);
+  const [adminView, setAdminView] = useState('manageUsers'); // Track admin's current view
 
   const handleLogout = () => {
     setToken('');
@@ -21,38 +23,54 @@ function App() {
     setShowAdminDashboard(false);
   };
 
+  // Updated handleAdminLogin function to use the local backend URL
   const handleAdminLogin = async (username, password) => {
     try {
-      const response = await axios.post(config.api.adminLoginUrl, { username, password });
+      const response = await axios.post('http://localhost:5000/admin/login', { 
+        username, 
+        password 
+      }, { withCredentials: true });
+
       setAdminToken(response.data.token);
       setShowLogin(false);
       setShowAdminDashboard(true);
+      setError('');
     } catch (error) {
-      setError('Admin login failed: ' + (error.response?.data?.error || 'Unauthorized'));
+      setError('Admin login failed: ' + (error.response?.data?.message || 'Unauthorized'));
     }
   };
 
   const handleUserLogin = async (username, password) => {
     try {
-      const response = await axios.post(config.api.loginUrl, { username, password });
+      const response = await axios.post(config.api.loginUrl, { 
+        username, 
+        password 
+      }, { withCredentials: true });
+
       setToken(response.data.token);
       setIsLoggedIn(true);
       setShowLogin(false);
+      setError('');
     } catch (error) {
-      setError('Login failed: ' + (error.response?.data?.error || 'Unauthorized'));
+      setError('Login failed: ' + (error.response?.data?.message || 'Unauthorized'));
     }
   };
 
   return (
     <div className="App">
       <Header
-        onRegister={() => setShowRegister(true)} // Open register modal
+        onRegister={() => setShowRegister(true)}
         onLogin={() => setShowLogin(true)}
         isLoggedIn={isLoggedIn || showAdminDashboard}
         onLogout={handleLogout}
+        showAdminDashboard={showAdminDashboard}
+        setAdminView={setAdminView}
       />
       {showAdminDashboard ? (
-        <ManageUsers adminToken={adminToken} />
+        <>
+          {adminView === 'manageUsers' && <ManageUsers adminToken={adminToken} />}
+          {adminView === 'managePrompts' && <ManagePrompts adminToken={adminToken} />}
+        </>
       ) : (
         <>
           <Body />
@@ -66,8 +84,8 @@ function App() {
               onAdminLogin={(username, password) => handleAdminLogin(username, password)}
               error={error}
               onRegister={() => {
-                setShowLogin(false); // Close login modal
-                setShowRegister(true); // Open register modal
+                setShowLogin(false);
+                setShowRegister(true);
               }}
             />
           )}
@@ -87,7 +105,7 @@ function App() {
   );
 }
 
-function Header({ onRegister, onLogin, isLoggedIn, onLogout }) {
+function Header({ onRegister, onLogin, isLoggedIn, onLogout, showAdminDashboard, setAdminView }) {
   return (
     <header className="header">
       <h1>{config.header.title}</h1>
@@ -99,12 +117,17 @@ function Header({ onRegister, onLogin, isLoggedIn, onLogout }) {
             </li>
           ))}
           {!isLoggedIn ? (
-            <>
-              <li><button onClick={onLogin} className="nav-button">Login</button></li>
-              {/* <li><button onClick={onRegister} className="nav-button">Register</button></li> */}
-            </>
+            <li><button onClick={onLogin} className="nav-button">Login</button></li>
           ) : (
-            <li><button onClick={onLogout} className="nav-button">Logout</button></li>
+            <>
+              {showAdminDashboard && (
+                <>
+                  <li><button onClick={() => setAdminView('manageUsers')} className="nav-button">Manage Users</button></li>
+                  <li><button onClick={() => setAdminView('managePrompts')} className="nav-button">Manage Prompts</button></li>
+                </>
+              )}
+              <li><button onClick={onLogout} className="nav-button">Logout</button></li>
+            </>
           )}
         </ul>
       </nav>
