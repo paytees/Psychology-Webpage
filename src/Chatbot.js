@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';  // Added useRef here
 import axios from 'axios';
-import config from './config';
+import config from './config'; // Ensure you have this configuration file
 
 function Chatbot({ token }) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [approvalStatus, setApprovalStatus] = useState('pending'); // 'pending', 'approved', 'denied'
   const [chatbotResponded, setChatbotResponded] = useState(false); // Track if the chatbot has responded
-  const chatWindowRef = useRef(null);
+  const chatWindowRef = useRef(null); // This will work after importing useRef
 
   // Automatically scroll to the bottom of the chat window on new messages
   useEffect(() => {
@@ -39,22 +39,18 @@ function Chatbot({ token }) {
 
   // Function to submit message without saving it to the database
   const handleSubmitRequest = async (message) => {
+    if (!message) {
+      console.error('Message is required');
+      return;
+    }
     try {
-      // Make the request to the backend API to get the response from ChatGPT
-      const response = await axios.post(`${config.api.baseUrl}/chat`, { message });
-
-      // Log the ChatGPT response to the console
-      console.log(response.data.reply);
-
+      const response = await axios.post(`${config.api.baseUrl}/chat`, { message, username: 'srilekha' });
+      console.log(response.data.reply);  // Log the response from the backend
       // Update the chat history with the response
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { text: response.data.reply, tag: response.data.tag }, // You may use the tag as needed
-      ]);
+      setMessages((prevMessages) => [...prevMessages, { text: response.data.reply }]);
 
-      // Mark that the chatbot has responded
-      setChatbotResponded(true);
-
+      // Mark chatbot as responded
+      setChatbotResponded(true); // This triggers the "Connect with Admin" button
     } catch (error) {
       console.error('Error submitting message:', error);
     }
@@ -134,9 +130,9 @@ function Chatbot({ token }) {
           onClick={handleConnectWithAdmin}
           className="connect-with-admin-button"
           style={{
-            backgroundColor: '#4CAF50', 
-            color: 'white', 
-            padding: '10px 20px', 
+            backgroundColor: '#4CAF50',
+            color: 'white',
+            padding: '10px 20px',
             borderRadius: '5px',
             cursor: 'pointer',
             marginTop: '10px',

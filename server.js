@@ -65,7 +65,8 @@ function initializeTables() {
     db.run(`CREATE TABLE IF NOT EXISTS prompts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   prompt TEXT NOT NULL,
-  tag TEXT NOT NULL
+  tag TEXT NOT NULL,
+   question TEXT
 );
 `);
 
@@ -168,51 +169,63 @@ app.get('/chatbot-access', (req, res) => {
     res.status(401).json({ error: 'Invalid token' });
   }
 });
-
 // Chatbot Interaction
 app.post('/chat', async (req, res) => {
   const { message, username } = req.body;
-  if (!message || !username) return res.status(400).json({ error: 'Message and username are required' });
+  console.log('Received message:', message); // Log the incoming message
+
+  if (!message || !username) return res.status(400).json({ error: 'Message and Username are required' });
 
   try {
-    // Generate the response using the ChatGPT model
+    // Check if the message is empty or not defined
+    if (!message.trim()) {
+      return res.status(400).json({ error: 'Message cannot be empty' });
+    }
+
+    // Fetch OpenAI response
     const fetch = (await import('node-fetch')).default;
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SECRET_KEY}`, // Replace with your OpenAI API key
+        'Authorization': `Bearer ${SECRET_KEY}`, // Ensure SECRET_KEY is defined
       },
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: message }],
+        messages: [{ role: "user", content: message }], // Pass the message to OpenAI
       }),
     });
 
-    // Handle OpenAI response
+    // Handle unsuccessful API response
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(`OpenAI API error: ${error.error.message}`);
+      console.log('OpenAI API error:', error); // Log the error from OpenAI
+      return res.status(500).json({ error: `OpenAI API error: ${error.error.message}` });
     }
 
     const data = await response.json();
-    const reply = data.choices[0].message.content;
+    const chatGPTResponse = data.choices[0].message.content;
 
-    // Insert the response into the database
-    const createdAt = new Date().toISOString();
-    const insertQuery = `INSERT INTO UserRequest (username, chatGPTResponse, adminResponse, createdAt) VALUES (?, ?, ?, ?)`;
+    // Log received response from OpenAI
+    console.log("Received ChatGPT response:", chatGPTResponse);
 
-    db.run(insertQuery, [username, reply, '', createdAt], function (err) {
-      if (err) {
-        console.error('Error inserting new user request:', err.message);
-        return res.status(500).json({ error: 'Failed to insert new user request' });
-      }
-      console.log('User request inserted successfully with ID:', this.lastID);
-      res.json({ reply });  // Send back the ChatGPT response
+    // Insert user request into UserRequest table
+    const insertUserRequestQuery = `INSERT INTO UserRequest (username, question, chatGPTResponse, createdAt) VALUES (?, ?, ?, ?)`;
+    await new Promise((resolve, reject) => {
+      db.run(insertUserRequestQuery, [username, message, chatGPTResponse, new Date().toISOString()], function (err) {
+        if (err) {
+          console.error('Error inserting user request:', err.message);
+          reject(new Error('Failed to insert user request'));
+        }
+        console.log('Inserted user request with ID:', this.lastID); // Log the inserted row ID
+        resolve();
+      });
     });
 
+    // Respond with the chatbot's reply
+    res.json({ reply: chatGPTResponse });
   } catch (error) {
-    console.error("Error with OpenAI API:", error.message);
+    console.error('Error with OpenAI API:', error.message);
     res.status(500).json({ error: 'Failed to get response from the chatbot' });
   }
 });
