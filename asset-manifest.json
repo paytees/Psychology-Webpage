@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/your-repository-name/static/css/main.440225fb.css",
-    "main.js": "/your-repository-name/static/js/main.c603563f.js",
-    "static/js/453.1904a217.chunk.js": "/your-repository-name/static/js/453.1904a217.chunk.js",
-    "index.html": "/your-repository-name/index.html",
-    "main.440225fb.css.map": "/your-repository-name/static/css/main.440225fb.css.map",
-    "main.c603563f.js.map": "/your-repository-name/static/js/main.c603563f.js.map",
-    "453.1904a217.chunk.js.map": "/your-repository-name/static/js/453.1904a217.chunk.js.map"
+    "main.css": "/Psychology-Webpage/static/css/main.440225fb.css",
+    "main.js": "/Psychology-Webpage/static/js/main.1130325d.js",
+    "static/js/453.1904a217.chunk.js": "/Psychology-Webpage/static/js/453.1904a217.chunk.js",
+    "index.html": "/Psychology-Webpage/index.html",
+    "main.440225fb.css.map": "/Psychology-Webpage/static/css/main.440225fb.css.map",
+    "main.1130325d.js.map": "/Psychology-Webpage/static/js/main.1130325d.js.map",
+    "453.1904a217.chunk.js.map": "/Psychology-Webpage/static/js/453.1904a217.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.440225fb.css",
-    "static/js/main.c603563f.js"
+    "static/js/main.1130325d.js"
   ]
 }
